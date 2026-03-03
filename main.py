@@ -1,9 +1,9 @@
 import pandas as pd
-import pickle
-import os
 import sys
-
+import os
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -13,15 +13,12 @@ from sklearn.ensemble import RandomForestClassifier
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QComboBox,
     QLineEdit, QPushButton, QVBoxLayout,
-    QMessageBox
+    QMessageBox, QFrame, QGraphicsDropShadowEffect,
+    QTableWidget, QTableWidgetItem
 )
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt
 
-
-# =========================
-# 1️⃣ TRAIN & SAVE MODEL
-# =========================
 
 train = pd.read_csv(r"C:\Users\Harsh\Downloads\train.csv")
 
@@ -29,76 +26,39 @@ features = ['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
 X = train[features]
 y = train['Survived']
 
-# Numeric & categorical features
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
 numeric_features = ['Age', 'Fare', 'SibSp', 'Parch']
 categorical_features = ['Sex', 'Embarked', 'Pclass']
 
-# Numeric pipeline
-numeric_transformer = Pipeline(steps=[
+numeric_transformer = Pipeline([
     ('imputer', SimpleImputer(strategy='median')),
     ('scaler', StandardScaler())
 ])
 
-# Categorical pipeline
-categorical_transformer = Pipeline(steps=[
+categorical_transformer = Pipeline([
     ('imputer', SimpleImputer(strategy='most_frequent')),
     ('onehot', OneHotEncoder(handle_unknown='ignore'))
 ])
 
-# Combine preprocessing
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', numeric_transformer, numeric_features),
-        ('cat', categorical_transformer, categorical_features)
-    ]
-)
-
-model = RandomForestClassifier(
-    n_estimators=300,
-    random_state=42
-)
-
-pipeline = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('classifier', model)
+preprocessor = ColumnTransformer([
+    ('num', numeric_transformer, numeric_features),
+    ('cat', categorical_transformer, categorical_features)
 ])
 
-X_train, X_val, y_train, y_val = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
+pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', RandomForestClassifier(n_estimators=300, random_state=42))
+])
 
 pipeline.fit(X_train, y_train)
 
-model_path = os.path.join(os.path.dirname(__file__), "titanic_full_model.pkl")
+y_pred = pipeline.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
 
-with open(model_path, "wb") as f:
-    pickle.dump(pipeline, f)
-
-print("Model trained and saved successfully!")
-
-# =========================
-# 2️⃣ LOAD MODEL
-# =========================
-
-with open(model_path, "rb") as f:
-    model = pickle.load(f)
-
-
-# =========================
-# 3️⃣ PYQT GUI
-# =========================
-
-# =========================
-# 3️⃣ PYQT GUI (UPDATED THEME)
-# =========================
-
-from PyQt5.QtWidgets import (
-    QApplication, QWidget, QLabel, QComboBox,
-    QLineEdit, QPushButton, QVBoxLayout,
-    QMessageBox, QFrame
-)
-from PyQt5.QtGui import QFont, QPalette, QBrush, QLinearGradient, QColor
-from PyQt5.QtCore import Qt
+model = pipeline
 
 
 class TitanicApp(QWidget):
@@ -106,130 +66,132 @@ class TitanicApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("🚢 Titanic Survival Predictor")
-        self.setGeometry(300, 150, 500, 650)
+        self.setGeometry(250, 40, 800, 950)
         self.setStyleSheet(self.get_styles())
         self.initUI()
 
     def initUI(self):
         main_layout = QVBoxLayout()
 
-        # ===== Glass Card Frame =====
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
+        card_layout.setSpacing(18)
 
-        # ===== Title =====
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(30)
+        shadow.setYOffset(8)
+        shadow.setColor(QColor(0, 0, 0, 120))
+        card.setGraphicsEffect(shadow)
+
         title = QLabel("🚢 TITANIC SURVIVAL PREDICTOR")
-        title.setFont(QFont("Times New Roman", 20, QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet("color: gold; letter-spacing: 2px;")
+        title.setObjectName("mainTitle")
         card_layout.addWidget(title)
 
-        subtitle = QLabel("Will you survive the voyage?")
+        subtitle = QLabel("Predict Survival Using Machine Learning Model")
         subtitle.setAlignment(Qt.AlignCenter)
-        subtitle.setStyleSheet("color: black; font-size: 14px;")
+        subtitle.setStyleSheet("""
+            color: #00008B;
+            font-size: 15px;
+            font-weight: bold;
+        """)
         card_layout.addWidget(subtitle)
 
-        # ===== Inputs =====
-        self.age_input = QLineEdit()
-        self.age_input.setPlaceholderText("Age")
+        acc_label = QLabel(f"Model Accuracy: {round(accuracy*100,2)}%")
+        acc_label.setAlignment(Qt.AlignCenter)
+        acc_label.setStyleSheet("""
+            color: yellow;
+            font-size: 15px;
+            font-weight: bold;
+        """)
+        card_layout.addWidget(acc_label)
 
-        self.fare_input = QLineEdit()
-        self.fare_input.setPlaceholderText("Fare")
+        self.age = QLineEdit()
+        self.age.setPlaceholderText("Enter Age")
 
-        self.sibsp_input = QLineEdit()
-        self.sibsp_input.setPlaceholderText("Siblings/Spouses aboard")
+        self.fare = QLineEdit()
+        self.fare.setPlaceholderText("Enter Fare")
 
-        self.parch_input = QLineEdit()
-        self.parch_input.setPlaceholderText("Parents/Children aboard")
+        self.sibsp = QLineEdit()
+        self.sibsp.setPlaceholderText("Siblings/Spouses")
 
-        self.gender_input = QComboBox()
-        self.gender_input.addItems(["male", "female"])
+        self.parch = QLineEdit()
+        self.parch.setPlaceholderText("Parents/Children")
 
-        self.embarked_input = QComboBox()
-        self.embarked_input.addItems(["S", "C", "Q"])
+        self.gender = QComboBox()
+        self.gender.addItems(["male", "female"])
 
-        self.pclass_input = QComboBox()
-        self.pclass_input.addItems(["1", "2", "3"])
+        self.embarked = QComboBox()
+        self.embarked.addItems(["S", "C", "Q"])
 
-        inputs = [
-            self.age_input, self.fare_input,
-            self.sibsp_input, self.parch_input,
-            self.gender_input, self.embarked_input,
-            self.pclass_input
-        ]
+        self.pclass = QComboBox()
+        self.pclass.addItems(["1", "2", "3"])
 
-        for widget in inputs:
-            widget.setMinimumHeight(40)
+        for widget in [self.age, self.fare, self.sibsp,
+                       self.parch, self.gender,
+                       self.embarked, self.pclass]:
+            widget.setMinimumHeight(42)
             card_layout.addWidget(widget)
 
-        # ===== Predict Button =====
-        self.button = QPushButton("⚓ Predict Survival")
-        self.button.setMinimumHeight(45)
-        self.button.clicked.connect(self.predict_survival)
-        card_layout.addWidget(self.button)
+        btn = QPushButton("⚓ Predict Survival")
+        btn.setMinimumHeight(48)
+        btn.clicked.connect(self.predict)
+        card_layout.addWidget(btn)
+
+        survived_counts = train['Survived'].value_counts()
+
+        table1 = QTableWidget(2, 2)
+        table1.setHorizontalHeaderLabels(["Status", "Count"])
+        table1.setItem(0, 0, QTableWidgetItem("Not Survived"))
+        table1.setItem(0, 1, QTableWidgetItem(str(survived_counts[0])))
+        table1.setItem(1, 0, QTableWidgetItem("Survived"))
+        table1.setItem(1, 1, QTableWidgetItem(str(survived_counts[1])))
+
+        card_layout.addWidget(QLabel("Total Survival Count"))
+        card_layout.addWidget(table1)
+
+        gender_class = pd.crosstab(
+            [train['Pclass'], train['Sex']],
+            train['Survived']
+        )
+
+        table2 = QTableWidget(len(gender_class), 4)
+        table2.setHorizontalHeaderLabels(
+            ["Class", "Gender", "Not Survived", "Survived"]
+        )
+
+        for row_idx, ((pclass, sex), values) in enumerate(gender_class.iterrows()):
+            table2.setItem(row_idx, 0, QTableWidgetItem(str(pclass)))
+            table2.setItem(row_idx, 1, QTableWidgetItem(sex))
+            table2.setItem(row_idx, 2, QTableWidgetItem(str(values[0])))
+            table2.setItem(row_idx, 3, QTableWidgetItem(str(values[1])))
+
+        card_layout.addWidget(QLabel("Male/Female Survival per Class"))
+        card_layout.addWidget(table2)
+
+        graph_btn = QPushButton("📊 Show Model Accuracy Graph")
+        graph_btn.clicked.connect(self.show_accuracy_graph)
+        card_layout.addWidget(graph_btn)
+
+        class_btn = QPushButton("👥 Show Survival per Class Graph")
+        class_btn.clicked.connect(self.show_class_graph)
+        card_layout.addWidget(class_btn)
 
         card.setLayout(card_layout)
         main_layout.addWidget(card)
         self.setLayout(main_layout)
 
-    def get_styles(self):
-        return """
-        QWidget {
-            background: qlineargradient(
-                x1:0, y1:0, x2:0, y2:1,
-                stop:0 #e0f7fa,
-                stop:0.5 #b2ebf2,
-                stop:1 #80deea
-            );
-        }
-
-        QFrame#card {
-            background-color: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 25px;
-        }
-
-        QLabel {
-            color: black;
-        }
-
-        QLineEdit, QComboBox {
-            background-color: Yellow;
-            border: 1px solid #b0bec5;
-            border-radius: 8px;
-            padding: 8px;
-            font-size: 14px;
-            color: black;
-        }
-
-        QPushButton {
-            background-color: #0277bd;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-        }
-
-        QPushButton:hover {
-            background-color: #01579b;
-        }
-
-        QMessageBox {
-            background-color: white;
-        }
-        """
-
-    def predict_survival(self):
+    def predict(self):
         try:
             data = pd.DataFrame([{
-                'Pclass': int(self.pclass_input.currentText()),
-                'Sex': self.gender_input.currentText(),
-                'Age': float(self.age_input.text()),
-                'SibSp': int(self.sibsp_input.text()),
-                'Parch': int(self.parch_input.text()),
-                'Fare': float(self.fare_input.text()),
-                'Embarked': self.embarked_input.currentText()
+                'Pclass': int(self.pclass.currentText()),
+                'Sex': self.gender.currentText(),
+                'Age': float(self.age.text()),
+                'SibSp': int(self.sibsp.text()),
+                'Parch': int(self.parch.text()),
+                'Fare': float(self.fare.text()),
+                'Embarked': self.embarked.currentText()
             }])
 
             prediction = model.predict(data)
@@ -238,22 +200,92 @@ class TitanicApp(QWidget):
             if prediction[0] == 1:
                 QMessageBox.information(
                     self,
-                    "Prediction Result",
-                    f"🟢 Likely to Survive\n\nSurvival Probability: {round(probability*100,2)}%"
+                    "Result",
+                    f"🟢 Likely to Survive\nProbability: {round(probability*100,2)}%"
                 )
             else:
                 QMessageBox.information(
                     self,
-                    "Prediction Result",
-                    f"🔴 Likely Did Not Survive\n\nSurvival Probability: {round(probability*100,2)}%"
+                    "Result",
+                    f"🔴 Likely Did Not Survive\nProbability: {round(probability*100,2)}%"
                 )
 
-        except ValueError:
-            QMessageBox.warning(self, "Input Error", "Please enter valid numeric values.")
+        except:
+            QMessageBox.warning(self, "Error", "Enter valid numeric values.")
 
-# =========================
-# 4️⃣ RUN APP
-# =========================
+    def show_accuracy_graph(self):
+        plt.figure()
+        plt.bar(["Accuracy"], [accuracy])
+        plt.ylim(0, 1)
+        plt.title("Model Accuracy")
+        plt.show()
+
+    def show_class_graph(self):
+        survival_counts = train.groupby(['Pclass','Survived']).size().unstack()
+        survival_counts.plot(kind='bar')
+        plt.title("Survival Count per Class")
+        plt.ylabel("Number of People")
+        plt.show()
+
+    def get_styles(self):
+        return """
+        QWidget {
+            background: qlineargradient(
+                x1:0, y1:0, x2:0, y2:1,
+                stop:0 white,
+                stop:1 lightyellow
+            );
+            font-family: Segoe UI;
+        }
+
+        QFrame#card {
+            background-color: #6A7B9C;
+            border-radius: 25px;
+            padding: 35px;
+        }
+
+        QLabel#mainTitle {
+            color: #00d4ff;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        QLineEdit, QComboBox {
+            background-color: #112240;
+            color: white;
+            border: 1px solid #233554;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        QLineEdit:focus, QComboBox:focus {
+            border: 2px solid #00d4ff;
+        }
+
+        QPushButton {
+            background-color: #00b4d8;
+            color: white;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        QPushButton:hover {
+            background-color: #0096c7;
+        }
+
+        QPushButton:pressed {
+            background-color: #e0f2ff;
+        }
+
+        QTableWidget {
+            background-color: white;
+            color: black;
+            gridline-color: #cccccc;
+        }
+        """
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
