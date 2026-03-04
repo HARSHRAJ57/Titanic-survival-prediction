@@ -2,13 +2,13 @@
 
 🚢 Titanic Survival Prediction
 
-📌 Project Overview
+ Project Overview
 
 This project is a Machine Learning classification system that predicts whether a passenger survived the Titanic disaster based on demographic and ticket-related information. The model is trained using the Kaggle dataset from the Titanic - Machine Learning from Disaster, which contains historical passenger records from the RMS Titanic.
 
 The goal of this project is to demonstrate an end-to-end Machine Learning workflow — from data preprocessing and model training to GUI-based deployment.
 
-<h2>🎯 Problem Statement</h2>
+<h2> Problem Statement</h2>
 
 Predict passenger survival using features such as:
 
@@ -30,7 +30,7 @@ Target Variable:
 
 Survived (0 = No, 1 = Yes)
 
-<h2>🧠 Machine Learning Approach</h2>  
+<h2> Machine Learning Approach</h2>  
  Data Preprocessing
 <ul>
   <li>Handling missing values using SimpleImputer</li>
@@ -39,11 +39,6 @@ Survived (0 = No, 1 = Yes)
    <li>Categorical encoding using OneHotEncoder</li>
    <li>Implemented using Pipeline & ColumnTransformer</li>
 </ul>
-
-
-
-
-
 
 
  Model Used
@@ -55,12 +50,6 @@ Survived (0 = No, 1 = Yes)
     <li> Performance evaluated using Accuracy Score </li>
 
 </ul>
-
-
-
-
-
-
 
 <h2>📊 Features of the Application</h2>  
 
@@ -108,6 +97,6 @@ GUI-based ML Model Deployment
 
 Real-world Dataset Application
 
-<h2>🚀 Conclusion</h2>  
+<h2> Conclusion</h2>  
 
 This project provides a complete implementation of a Machine Learning system integrated with a graphical user interface. It showcases practical application of AI/ML concepts using a real-world dataset and demonstrates how predictive models can be deployed in user-friendly applications.
